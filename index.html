@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#09090c">
+  <title>K-AI — local coding companion</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --ink: #f3f0ef;
+      --muted: #89878e;
+      --line: rgba(255,255,255,.09);
+      --panel: rgba(15,14,18,.84);
+      --red: #ff453f;
+      --hot: #ff7967;
+      --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; background: #09090c; color: var(--ink); font-family: var(--sans); }
+    button, textarea { font: inherit; }
+    button { color: inherit; }
+    .scene { position: fixed; inset: 0; overflow: hidden; pointer-events: none; background: radial-gradient(ellipse at 68% 32%, rgba(80,13,22,.20), transparent 38%), radial-gradient(ellipse at 12% 84%, rgba(34,12,23,.20), transparent 35%), #09090c; }
+    #universe { position: absolute; inset: 0; width: 100%; height: 100%; opacity: .9; }
+    .nebula { position: absolute; width: 52vw; height: 52vw; min-width: 440px; min-height: 440px; border-radius: 50%; filter: blur(85px); opacity: .13; background: radial-gradient(circle, #9f1c27 0, #50121d 23%, transparent 68%); animation: drift 24s ease-in-out infinite alternate; }
+    .nebula.one { top: -34vw; right: 3vw; }
+    .nebula.two { bottom: -42vw; left: 18vw; opacity: .08; animation-delay: -12s; }
+    @keyframes drift { to { transform: translate(-5vw, 8vh) scale(1.13); } }
+    .app { position: relative; z-index: 1; min-height: 100vh; display: grid; grid-template-columns: 248px minmax(0,1fr); }
+    aside { display: flex; flex-direction: column; min-height: 100vh; padding: 27px 18px 18px; border-right: 1px solid var(--line); background: rgba(9,9,12,.72); backdrop-filter: blur(18px); }
+    .brand { display: flex; align-items: center; gap: 11px; padding: 0 8px; }
+    .brand-mark { width: 32px; height: 32px; display: grid; place-items: center; border: 1px solid rgba(255,69,63,.56); border-radius: 9px; color: var(--red); box-shadow: inset 0 0 17px rgba(255,69,63,.13), 0 0 22px rgba(255,69,63,.12); }
+    .brand-mark svg { width: 18px; }
+    .brand-name { font-size: 15px; font-weight: 650; letter-spacing: .03em; }
+    .brand-tag { margin-left: auto; color: #77747c; font: 9px var(--mono); letter-spacing: .08em; }
+    .new-chat { width: 100%; display: flex; align-items: center; gap: 10px; margin-top: 37px; padding: 11px 12px; border: 1px solid rgba(255,255,255,.13); border-radius: 7px; background: rgba(255,255,255,.035); cursor: pointer; transition: background .2s,border-color .2s; font-size: 12px; }
+    .new-chat:hover { border-color: rgba(255,69,63,.5); background: rgba(255,69,63,.07); }
+    .new-chat svg { width: 15px; color: var(--hot); }
+    .side-label { margin: 32px 9px 13px; color: #65636a; font: 9px var(--mono); letter-spacing: .17em; }
+    .side-link { display: flex; align-items: center; gap: 11px; padding: 10px 11px; color: #aaa7ae; border-radius: 6px; font-size: 11px; }
+    .side-link svg { width: 15px; height: 15px; color: #79767f; }
+    .side-link.active { background: rgba(255,255,255,.055); color: #f0eded; }
+    .side-link.active svg { color: var(--red); }
+    .side-spacer { flex: 1; }
+    .local-card { padding: 13px 12px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+    .local-head { display: flex; align-items: center; gap: 8px; color: #dad7db; font-size: 10px; }
+    .status-dot { width: 6px; height: 6px; border-radius: 100%; background: #e84c43; box-shadow: 0 0 10px #e84c43; }
+    .local-copy { margin: 9px 0 0 14px; color: #77747d; font-size: 10px; line-height: 1.65; }
+    .profile { display: flex; align-items: center; gap: 10px; padding: 17px 7px 3px; }
+    .avatar { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 50%; background: linear-gradient(140deg,#612027,#1b1419); color: #ffb6a9; font: 10px var(--mono); }
+    .profile-name { font-size: 10px; color: #d3d0d5; }
+    .profile-label { margin-top: 3px; color: #6b6870; font-size: 9px; }
+    main { min-width: 0; min-height: 100vh; display: flex; flex-direction: column; }
+    .topbar { height: 64px; display: flex; align-items: center; justify-content: space-between; padding: 0 36px; border-bottom: 1px solid var(--line); background: rgba(9,9,12,.22); backdrop-filter: blur(10px); }
+    .breadcrumb { color: #8d8991; font: 10px var(--mono); letter-spacing: .04em; }
+    .breadcrumb span { color: #e1dcdf; }
+    .top-right { display: flex; align-items: center; gap: 17px; }
+    .model-chip { display: flex; align-items: center; gap: 7px; padding: 6px 9px; border: 1px solid var(--line); border-radius: 4px; color: #aaa5ad; font: 9px var(--mono); }
+    .model-chip i { width: 5px; height: 5px; background: var(--red); border-radius: 50%; box-shadow: 0 0 8px var(--red); }
+    .top-icon { display: grid; place-items: center; width: 29px; height: 29px; border: 0; border-radius: 5px; background: transparent; color: #88848d; cursor: pointer; }
+    .top-icon:hover { background: rgba(255,255,255,.06); color: white; }
+    .top-icon svg { width: 15px; }
+    .content { width: min(760px, calc(100% - 48px)); margin: 0 auto; flex: 1; display: flex; flex-direction: column; }
+    .welcome { margin: auto 0 31px; padding-top: 52px; animation: rise .75s both; }
+    @keyframes rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+    .eyebrow { display: flex; align-items: center; gap: 10px; margin-bottom: 21px; color: #a7a1a8; font: 9px var(--mono); letter-spacing: .19em; }
+    .eyebrow::before { content: ""; width: 22px; height: 1px; background: var(--red); box-shadow: 0 0 8px var(--red); }
+    h1 { margin: 0; color: #f4f0ef; font-size: clamp(35px, 5vw, 54px); line-height: 1.05; font-weight: 520; letter-spacing: -.045em; }
+    h1 span { color: var(--hot); }
+    .subhead { max-width: 470px; margin: 15px 0 0; color: #8e8992; font-size: 13px; line-height: 1.8; }
+    .event { display: flex; align-items: center; gap: 12px; margin-top: 29px; padding-top: 15px; border-top: 1px solid var(--line); color: #77727b; font: 9px var(--mono); letter-spacing: .07em; }
+    .event-badge { padding: 5px 7px; border: 1px solid rgba(255,69,63,.35); color: #fa786d; border-radius: 3px; }
+    .event-text { color: #aaa4ad; }
+    .event-time { margin-left: auto; color: #6d6971; }
+    .suggestions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; margin-bottom: 19px; animation: rise .8s .08s both; }
+    .suggestion { min-height: 73px; padding: 12px 13px; text-align: left; border: 1px solid var(--line); border-radius: 6px; background: rgba(18,16,20,.62); cursor: pointer; transition: .2s; }
+    .suggestion:hover { border-color: rgba(255,69,63,.4); background: rgba(255,69,63,.045); transform: translateY(-2px); }
+    .suggestion-icon { display: block; margin-bottom: 9px; color: var(--hot); font-size: 12px; }
+    .suggestion strong { display: block; color: #d1ccd2; font-size: 10px; font-weight: 550; }
+    .suggestion small { display: block; margin-top: 4px; color: #77727b; font-size: 9px; }
+    .conversation { display: none; flex: 1; padding: 34px 0 20px; overflow-y: auto; }
+    .conversation.visible { display: block; }
+    .message { margin: 0 0 24px; animation: rise .3s both; }
+    .message.user { margin-left: 13%; }
+    .message-label { display: flex; align-items: center; gap: 8px; margin-bottom: 9px; color: #8c8790; font: 9px var(--mono); letter-spacing: .1em; text-transform: uppercase; }
+    .message.user .message-label { color: #c16b69; }
+    .message-body { color: #ddd8df; font-size: 13px; line-height: 1.8; white-space: pre-wrap; }
+    .message.user .message-body { padding: 12px 14px; border: 1px solid var(--line); border-radius: 6px; background: rgba(255,255,255,.04); }
+    .response-note { margin-top: 12px; padding: 10px 12px; border-left: 1px solid rgba(255,69,63,.65); background: rgba(255,69,63,.035); color: #a59da5; font-size: 10px; line-height: 1.65; }
+    .response-note b { margin-right: 7px; color: #ff8c7e; font: 9px var(--mono); letter-spacing: .08em; }
+    .composer-wrap { margin-top: auto; padding: 12px 0 18px; }
+    .composer { padding: 12px 13px 9px; border: 1px solid rgba(255,255,255,.15); border-radius: 8px; background: rgba(16,15,19,.9); box-shadow: 0 12px 50px rgba(0,0,0,.25); transition: border-color .2s, box-shadow .2s; }
+    .composer:focus-within { border-color: rgba(255,69,63,.5); box-shadow: 0 0 0 3px rgba(255,69,63,.045), 0 12px 50px rgba(0,0,0,.25); }
+    textarea { display: block; width: 100%; min-height: 46px; max-height: 160px; resize: none; padding: 3px 2px; border: 0; outline: 0; color: #efebef; background: transparent; font-size: 12px; line-height: 1.65; }
+    textarea::placeholder { color: #77727a; }
+    .composer-tools { display: flex; align-items: center; justify-content: space-between; padding-top: 7px; }
+    .composer-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .language-select { max-width: 160px; padding: 6px 25px 6px 8px; border: 1px solid var(--line); border-radius: 4px; outline: 0; color: #c9c4cb; background: #17151a; font-size: 10px; }
+    .language-select:focus { border-color: rgba(255,69,63,.5); }
+    .composer-hint { color: #69656d; font: 9px var(--mono); }
+    .send { display: grid; place-items: center; width: 31px; height: 31px; border: 0; border-radius: 5px; background: var(--red); color: #16090a; cursor: pointer; transition: .2s; }
+    .send:hover { background: #ff7166; transform: translateY(-1px); }
+    .send:disabled { opacity: .45; cursor: default; transform: none; }
+    .send svg { width: 15px; }
+    .disclaimer { padding: 0 0 14px; color: #625e66; text-align: center; font-size: 9px; line-height: 1.5; }
+    @media (max-width: 720px) {
+      .app { grid-template-columns: 1fr; }
+      aside { display: none; }
+      .topbar { height: 56px; padding: 0 17px; }
+      .content { width: min(100% - 34px, 600px); }
+      .welcome { padding-top: 27px; }
+      .suggestions { grid-template-columns: 1fr; gap: 7px; }
+      .suggestion { min-height: 57px; display: grid; grid-template-columns: 23px 1fr; align-content: center; align-items: center; }
+      .suggestion-icon { grid-row: span 2; margin: 0; }
+      .suggestion small { margin-top: 2px; }
+      .event { gap: 7px; font-size: 8px; }
+      .event-time { display: none; }
+      .welcome { margin-bottom: 24px; }
+      .composer-left { gap: 7px; }
+      .language-select { max-width: 122px; }
+      .composer-hint { max-width: 42vw; line-height: 1.5; }
+    }
+    @media (prefers-reduced-motion: reduce) { *,*::before,*::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; } }
+  </style>
+</head>
+<body>
+  <div class="scene" aria-hidden="true"><canvas id="universe"></canvas><div class="nebula one"></div><div class="nebula two"></div></div>
+  <div class="app">
+    <aside>
+      <div class="brand"><div class="brand-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2.8 14.7 9.3 21.2 12l-6.5 2.7L12 21.2l-2.7-6.5L2.8 12l6.5-2.7L12 2.8Z"/><circle cx="12" cy="12" r="2"/></svg></div><div class="brand-name">K—AI</div><div class="brand-tag">FIELD 01</div></div>
+      <button class="new-chat" id="newChat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 5v14M5 12h14"/></svg>New transmission</button>
+      <div class="side-label">WORKSPACE</div>
+      <div class="side-link active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="m8 8-4 4 4 4M16 8l4 4-4 4M14 5l-4 14"/></svg>Code chat</div>
+      <div class="side-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M7 4h10l4 4v12H7zM17 4v5h4M10 13h8M10 17h8"/><path d="M3 7v14h14"/></svg>Code notes</div>
+      <div class="side-label">LANGUAGES</div>
+      <div class="side-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M3.5 9h17M3.5 15h17M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg>Any syntax · local demo</div>
+      <div class="side-spacer"></div>
+      <div class="local-card"><div class="local-head"><i class="status-dot"></i>LOCAL CODING DEMO</div><p class="local-copy">No cloud model or external AI service. Replies use small built-in rules and examples.</p></div>
+      <div class="profile"><div class="avatar">K</div><div><div class="profile-name">Explorer</div><div class="profile-label">Personal workspace</div></div></div>
+    </aside>
+    <main>
+      <header class="topbar"><div class="breadcrumb">K—AI <span>/</span> CODE WORKSPACE</div><div class="top-right"><div class="model-chip"><i></i>LOCAL CODING DEMO</div><button class="top-icon" id="clearButton" aria-label="Clear conversation" title="Clear conversation"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 7h16M10 11v6M14 11v6M5.5 7l1 14h11l1-14M9 7V4h6v3"/></svg></button></div></header>
+      <section class="content">
+        <section class="welcome" id="welcome">
+          <div class="eyebrow">A PRIVATE WORKBENCH FOR CODE</div>
+          <h1>Build in any<br><span>language.</span></h1>
+          <p class="subhead">Explore syntax, inspect snippets, and work through debugging ideas. This coding-focused prototype keeps prompts in your browser and uses built-in local patterns.</p>
+          <div class="event"><span class="event-badge">LIVE EVENT</span><span class="event-text" id="eventText">PULSAR FORMING IN THE VEIL</span><span class="event-time" id="eventTime">SECTOR 07 · 00:14 AGO</span></div>
+        </section>
+        <section class="conversation" id="conversation" aria-live="polite"></section>
+        <div class="suggestions" id="suggestions">
+          <button class="suggestion" data-prompt="How do I debug an error in my code?"><span class="suggestion-icon">⌁</span><strong>Debug an error</strong><small>Get a repeatable checklist</small></button>
+          <button class="suggestion" data-prompt="Show me a hello world example."><span class="suggestion-icon">&lt;/&gt;</span><strong>See a language example</strong><small>Choose a language below</small></button>
+          <button class="suggestion" data-prompt="How can I understand an unfamiliar code snippet?"><span class="suggestion-icon">◎</span><strong>Understand a code snippet</strong><small>Start with structure and flow</small></button>
+        </div>
+        <div class="composer-wrap">
+          <form class="composer" id="composer">
+            <textarea id="prompt" rows="2" maxlength="4000" placeholder="Ask a coding question or paste a snippet..." aria-label="Your coding question or code"></textarea>
+            <div class="composer-tools"><div class="composer-left"><select class="language-select" id="languageSelect" aria-label="Programming language"><option value="auto">Auto-detect language</option><option value="python">Python</option><option value="javascript">JavaScript</option><option value="typescript">TypeScript</option><option value="java">Java</option><option value="c">C</option><option value="cpp">C++</option><option value="csharp">C#</option><option value="go">Go</option><option value="rust">Rust</option><option value="ruby">Ruby</option><option value="php">PHP</option><option value="swift">Swift</option><option value="kotlin">Kotlin</option><option value="sql">SQL</option><option value="html">HTML</option><option value="css">CSS</option><option value="bash">Bash</option><option value="lua">Lua</option><option value="r">R</option><option value="dart">Dart</option><option value="scala">Scala</option><option value="haskell">Haskell</option><option value="perl">Perl</option><option value="elixir">Elixir</option><option value="zig">Zig</option><option value="solidity">Solidity</option><option value="powershell">PowerShell</option><option value="other">Other</option></select><span class="composer-hint">LOCAL RULES · NO TRAINED MODEL</span></div><button class="send" id="sendButton" aria-label="Send message" title="Send message"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m4 4 16 8-16 8 3-8-3-8Z"/><path d="M7 12h13"/></svg></button></div>
+          </form>
+        </div>
+        <div class="disclaimer">Local coding prototype: language examples and general debugging patterns only. It does not execute, compile, or fully understand code.</div>
+      </section>
+    </main>
+  </div>
+<script>
+  (() => {
+    const canvas = document.getElementById('universe');
+    const context = canvas.getContext('2d');
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let width = 0;
+    let height = 0;
+    let stars = [];
+    let events = [];
+    let lastEvent = 0;
+    const eventNames = ['PULSAR FORMING IN THE VEIL', 'SUPERNOVA ECHO CROSSING SECTOR 04', 'NEW STAR IGNITION · OUTER ARM', 'NEUTRON STAR COLLISION DETECTED', 'RED GIANT SHEDDING ITS OUTER LAYERS'];
+
+    function resize() {
+      const scale = Math.min(window.devicePixelRatio || 1, 2);
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = width * scale;
+      canvas.height = height * scale;
+      context.setTransform(scale, 0, 0, scale, 0, 0);
+      stars = Array.from({ length: Math.floor(width * height / 4200) }, () => ({ x: Math.random() * width, y: Math.random() * height, r: Math.random() * 1.15 + .2, a: Math.random() * .55 + .15, p: Math.random() * 7 }));
+    }
+
+    function addEvent() {
+      events.push({ x: Math.random() * width * .8 + width * .1, y: Math.random() * height * .78 + height * .08, age: 0, life: 220 + Math.random() * 130, pulse: Math.random() > .5 });
+      const event = eventNames[Math.floor(Math.random() * eventNames.length)];
+      document.getElementById('eventText').textContent = event;
+      document.getElementById('eventTime').textContent = `SECTOR ${String(Math.floor(Math.random() * 12) + 1).padStart(2, '0')} · JUST NOW`;
+    }
+
+    function draw() {
+      context.clearRect(0, 0, width, height);
+      const t = performance.now() / 1000;
+      for (const star of stars) {
+        const alpha = star.a * (.72 + Math.sin(t * .7 + star.p) * .28);
+        context.fillStyle = `rgba(255,231,228,${alpha})`;
+        context.beginPath(); context.arc(star.x, star.y, star.r, 0, Math.PI * 2); context.fill();
+      }
+      for (const event of events) {
+        event.age += 1;
+        const progress = event.age / event.life;
+        const radius = progress * (event.pulse ? 90 : 52);
+        context.globalAlpha = Math.sin(progress * Math.PI) * .32;
+        context.strokeStyle = event.pulse ? '#ff4b48' : '#ff8b70';
+        context.lineWidth = event.pulse ? 1 : 1.3;
+        context.beginPath(); context.arc(event.x, event.y, radius, 0, Math.PI * 2); context.stroke();
+        if (event.pulse) { context.beginPath(); context.arc(event.x, event.y, radius * .57, 0, Math.PI * 2); context.stroke(); }
+        context.fillStyle = '#ff7967'; context.beginPath(); context.arc(event.x, event.y, (1 - progress) * 2.4 + .4, 0, Math.PI * 2); context.fill();
+        context.globalAlpha = 1;
+      }
+      events = events.filter(event => event.age < event.life);
+      if (!reducedMotion && performance.now() - lastEvent > 4600 + Math.random() * 4800) { addEvent(); lastEvent = performance.now(); }
+      if (!reducedMotion) requestAnimationFrame(draw);
+    }
+    resize();
+    if (reducedMotion) { addEvent(); draw(); } else { lastEvent = performance.now(); requestAnimationFrame(draw); }
+    window.addEventListener('resize', resize);
+
+    const form = document.getElementById('composer');
+    const input = document.getElementById('prompt');
+    const languageSelect = document.getElementById('languageSelect');
+    const conversation = document.getElementById('conversation');
+    const welcome = document.getElementById('welcome');
+    const suggestions = document.getElementById('suggestions');
+
+    const languageNames = {
+      python: 'Python', javascript: 'JavaScript', typescript: 'TypeScript', java: 'Java', c: 'C', cpp: 'C++', csharp: 'C#', go: 'Go', rust: 'Rust', ruby: 'Ruby', php: 'PHP', swift: 'Swift', kotlin: 'Kotlin', sql: 'SQL', html: 'HTML', css: 'CSS', bash: 'Bash', lua: 'Lua', r: 'R', dart: 'Dart', scala: 'Scala', haskell: 'Haskell', perl: 'Perl', elixir: 'Elixir', zig: 'Zig', solidity: 'Solidity', powershell: 'PowerShell', other: 'Other language'
+    };
+    const helloExamples = {
+      python: 'print("Hello, world!")',
+      javascript: 'console.log("Hello, world!");',
+      typescript: 'const message: string = "Hello, world!";\nconsole.log(message);',
+      java: 'class Main {\n  public static void main(String[] args) {\n    System.out.println("Hello, world!");\n  }\n}',
+      c: '#include <stdio.h>\n\nint main(void) {\n  puts("Hello, world!");\n  return 0;\n}',
+      cpp: '#include <iostream>\n\nint main() {\n  std::cout << "Hello, world!\\n";\n}',
+      csharp: 'using System;\n\nConsole.WriteLine("Hello, world!");',
+      go: 'package main\n\nimport "fmt"\n\nfunc main() {\n  fmt.Println("Hello, world!")\n}',
+      rust: 'fn main() {\n    println!("Hello, world!");\n}',
+      ruby: 'puts "Hello, world!"',
+      php: '<?php\necho "Hello, world!\\n";',
+      swift: 'print("Hello, world!")',
+      kotlin: 'fun main() {\n    println("Hello, world!")\n}',
+      sql: 'SELECT \'Hello, world!\' AS greeting;',
+      html: '<!doctype html>\n<html lang="en">\n  <body>Hello, world!</body>\n</html>',
+      css: '/* CSS styles a page; it does not print text. */\nbody::before { content: "Hello, world!"; }',
+      bash: 'printf \'%s\\n\' "Hello, world!"',
+      lua: 'print("Hello, world!")',
+      r: 'cat("Hello, world!\\n")',
+      dart: 'void main() {\n  print("Hello, world!");\n}',
+      scala: 'object Main extends App {\n  println("Hello, world!")\n}',
+      haskell: 'main :: IO ()\nmain = putStrLn "Hello, world!"',
+      perl: 'print "Hello, world!\\n";',
+      elixir: 'IO.puts("Hello, world!")',
+      zig: 'const std = @import("std");\n\npub fn main() void {\n    std.debug.print("Hello, world!\\n", .{});\n}',
+      solidity: 'pragma solidity ^0.8.0;\n\ncontract Greeting {\n  function message() public pure returns (string memory) {\n    return "Hello, world!";\n  }\n}',
+      powershell: 'Write-Output "Hello, world!"'
+    };
+
+    function detectLanguage(text, selected) {
+      if (selected !== 'auto') return selected;
+      const patterns = [
+        ['html', /<!doctype html|<html\b|<div\b/i], ['css', /[.#][\w-]+\s*\{[^}]*\}/],
+        ['typescript', /\binterface\s+\w+|:\s*(string|number|boolean)\b|\btype\s+\w+\s*=/],
+        ['solidity', /\bpragma\s+solidity\b|\bcontract\s+\w+/], ['zig', /\bpub\s+fn\s+main\b|@import\("std"\)/],
+        ['haskell', /\bmain\s*::\s*IO\b|\bputStrLn\b/], ['elixir', /\bdefmodule\b|\bIO\.puts\b/],
+        ['swift', /\bimport\s+Foundation\b|\bfunc\s+main\s*\(/], ['kotlin', /\bfun\s+main\s*\(|\bval\s+\w+\s*=/],
+        ['dart', /\bvoid\s+main\s*\(\)\s*\{|\bprint\('/], ['scala', /\bobject\s+\w+\s+extends\s+App\b/],
+        ['perl', /\bmy\s+\$\w+\s*=|^#!.*\bperl\b/m], ['r', /\bfunction\s*\(|\bcat\s*\(/],
+        ['lua', /\blocal\s+function\b|\bfunction\s*\w+\s*\(/],
+        ['rust', /\bfn\s+main\s*\(|\blet\s+mut\b|println!\s*\(/], ['go', /\bpackage\s+main\b|\bfunc\s+main\s*\(/],
+        ['csharp', /\busing\s+System\b|Console\.Write(Line)?\s*\(/], ['cpp', /#include\s*<iostream>|std::|\bcout\s*<</],
+        ['c', /#include\s*<stdio\.h>|\bprintf\s*\(/], ['java', /\bpublic\s+class\b|System\.out\.println/],
+        ['python', /\bdef\s+\w+\s*\(|\bprint\s*\(|\bimport\s+\w+/], ['javascript', /\b(const|let|console\.log|function)\b|=>/],
+        ['ruby', /\bputs\s+|\bdef\s+\w+\s*$/m], ['powershell', /\bWrite-Output\b|\$\w+\s*=|^#!.*pwsh/m],
+        ['php', /<\?php|\$\w+\s*=/], ['sql', /\b(SELECT|INSERT|UPDATE|DELETE|CREATE TABLE)\b/i],
+        ['bash', /^#!.*\b(bash|sh)\b|\becho\s+['"]?/m]
+      ];
+      const match = patterns.find(([, pattern]) => pattern.test(text));
+      return match ? match[0] : 'other';
+    }
+
+    function localReply(text, selectedLanguage) {
+      const normalized = text.toLowerCase();
+      const language = detectLanguage(text, selectedLanguage);
+      const languageName = languageNames[language] || 'the selected language';
+      if (/\b(hello\s*,?\s*world|hello world example)\b/.test(normalized)) {
+        const exampleLanguage = language === 'other' || language === 'auto' ? 'python' : language;
+        return { answer: `Minimal ${languageNames[exampleLanguage]} example:\n\n${helloExamples[exampleLanguage] || helloExamples.python}`, note: `Returned a built-in ${languageNames[exampleLanguage]} starter example; this was not generated by a language model.` };
+      }
+      if (/\b(debug|error|bug|fix|broken|exception|crash)\b/.test(normalized)) {
+        return { answer: `A practical debugging pass${language !== 'other' ? ` for ${languageName}` : ''}:\n\n1. Read the first error message and note its file and line.\n2. Reproduce the issue with the smallest input you can.\n3. Check the values and assumptions immediately before the failing line.\n4. Change one thing, then run the same check again.\n\nPaste the smallest failing snippet and the exact error text for more targeted guidance. I do not run or compile code in this demo.`, note: 'Matched a debugging request and returned a language-agnostic checklist; no code was executed.' };
+      }
+      if (/\b(explain|understand|walk me through|what does)\b/.test(normalized)) {
+        return { answer: `For a snippet${language !== 'other' ? ` that looks like ${languageName}` : ''}, trace it in this order: identify inputs, find the entry point, follow the main branches or loops, then note what values are returned or changed.\n\nThis local demo does not parse code semantics. Include a focused snippet and tell me which line or concept is confusing for more useful context.`, note: `Detected ${languageName} from the language picker or simple syntax patterns; provided a general code-reading checklist.` };
+      }
+      return { answer: `I can help with coding prompts in many languages, but this page is a local prototype rather than a trained coding model. I can show built-in Hello World examples and offer general debugging or code-reading checklists.\n\nDetected language: ${languageName}. For useful debugging context, include the smallest relevant snippet and the exact error message.`, note: 'No built-in code-generation pattern matched; returned the prototype capabilities and next useful input.' };
+    }
+
+    function addMessage(role, text, note) {
+      const article = document.createElement('article');
+      article.className = `message ${role}`;
+      const label = document.createElement('div');
+      label.className = 'message-label';
+      label.textContent = role === 'user' ? 'YOU' : 'K—AI · LOCAL CODING DEMO';
+      const body = document.createElement('div');
+      body.className = 'message-body';
+      body.textContent = text;
+      article.append(label, body);
+      if (note) {
+        const summary = document.createElement('div');
+        summary.className = 'response-note';
+        const title = document.createElement('b');
+        title.textContent = 'RESPONSE NOTE';
+        summary.append(title, document.createTextNode(note));
+        article.append(summary);
+      }
+      conversation.append(article);
+    }
+
+    function submit(text) {
+      const value = text.trim();
+      if (!value) return;
+      welcome.hidden = true;
+      suggestions.hidden = true;
+      conversation.classList.add('visible');
+      addMessage('user', value);
+      const result = localReply(value, languageSelect.value);
+      addMessage('assistant', result.answer, result.note);
+      conversation.scrollTop = conversation.scrollHeight;
+      input.value = '';
+      input.focus();
+    }
+
+    form.addEventListener('submit', event => { event.preventDefault(); submit(input.value); });
+    input.addEventListener('keydown', event => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); form.requestSubmit(); } });
+    document.querySelectorAll('.suggestion').forEach(button => button.addEventListener('click', () => submit(button.dataset.prompt)));
+    function resetConversation() {
+      conversation.replaceChildren();
+      conversation.classList.remove('visible');
+      welcome.hidden = false;
+      suggestions.hidden = false;
+      input.value = '';
+    }
+    document.getElementById('newChat').addEventListener('click', resetConversation);
+    document.getElementById('clearButton').addEventListener('click', resetConversation);
+  })();
+</script>
+</body>
+</html>
